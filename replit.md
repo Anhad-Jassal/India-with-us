@@ -1,6 +1,6 @@
-# [Project name]
+# India With Us
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+India With Us is a travel marketplace for discovering India, booking considered ready-made journeys, and creating custom itineraries.
 
 ## Run & Operate
 
@@ -22,15 +22,21 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/india-with-us` — responsive React/Vite product experience and routes
+- `artifacts/api-server/src/routes/travel.ts` — travel API, demo checkout, planner generation, auth session, and contact flow
+- `lib/api-spec/openapi.yaml` — source of truth for generated API clients and validation
+- `lib/api-client-react` / `lib/api-zod` — generated frontend hooks and server schemas
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The visual language is editorial and warm: Playfair Display, DM Sans, saffron, clay, teal, and large India photography.
+- Public travel data uses a curated India-only seed set so the first preview is useful even before an admin adds content.
+- Checkout is intentionally demo/payment-ready: it creates an order record without ever accepting raw card details.
+- API contracts are OpenAPI-first; run codegen after changing `lib/api-spec/openapi.yaml`.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Visitors can search destinations and tours, browse tour details, submit a demo booking, create an account, build a multi-step custom trip, save plans, contact support, and view an admin operations summary.
 
 ## User preferences
 
@@ -38,7 +44,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The current travel API keeps demo state in memory for the preview; restart the API to reset demo users, orders, and saved plans.
+- The generated Zod client uses Zod 4 APIs, so `@workspace/api-zod` intentionally pins its own Zod 4 dependency even though the broader workspace catalog remains on Zod 3.
 
 ## Pointers
 

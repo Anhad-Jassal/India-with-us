@@ -10,6 +10,20 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: destinations
+    description: Indian destinations
+  - name: tours
+    description: Ready-made tour plans
+  - name: planner
+    description: Custom trip planner
+  - name: auth
+    description: Customer authentication
+  - name: account
+    description: Customer account
+  - name: admin
+    description: Admin operations
+  - name: contact
+    description: Help and contact messages
 paths:
   /healthz:
     get:
@@ -24,7 +38,250 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /destinations:
+    get:
+      operationId: listDestinations
+      tags: [destinations]
+      summary: List Indian destinations
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: region
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Destinations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Destination" }
+  /destinations/{id}:
+    get:
+      operationId: getDestination
+      tags: [destinations]
+      summary: Get a destination
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Destination
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Destination" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tours:
+    get:
+      operationId: listTours
+      tags: [tours]
+      summary: List published tour plans
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: style
+          in: query
+          schema: { type: string }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [popular, price-low, price-high]
+      responses:
+        "200":
+          description: Tours
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Tour" }
+  /tours/{id}:
+    get:
+      operationId: getTour
+      tags: [tours]
+      summary: Get tour details
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Tour
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tour" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create a customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+      responses:
+        "201":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginInput" }
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "204": { description: Logged out }
+  /account:
+    get:
+      operationId: getAccount
+      tags: [account]
+      summary: Get the current customer account
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [account]
+      summary: List customer orders
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+    post:
+      operationId: createOrder
+      tags: [account]
+      summary: Create a demo checkout order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderInput" }
+      responses:
+        "201":
+          description: Order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+  /custom-plans:
+    get:
+      operationId: listCustomPlans
+      tags: [planner, account]
+      summary: List saved custom plans
+      responses:
+        "200":
+          description: Custom plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CustomPlan" }
+    post:
+      operationId: createCustomPlan
+      tags: [planner]
+      summary: Save a generated custom plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomPlanInput" }
+      responses:
+        "201":
+          description: Custom plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomPlan" }
+  /planner/generate:
+    post:
+      operationId: generateCustomPlan
+      tags: [planner]
+      summary: Generate a custom itinerary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlannerInput" }
+      responses:
+        "200":
+          description: Generated plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomPlan" }
+  /contact:
+    post:
+      operationId: sendContactMessage
+      tags: [contact]
+      summary: Send a help message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactInput" }
+      responses:
+        "201":
+          description: Confirmation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageResult" }
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [admin]
+      summary: Get admin dashboard summary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSummary" }
 components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +290,191 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+    Destination:
+      type: object
+      required: [id, name, state, region, description, image, attractions, startingPrice]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        state: { type: string }
+        region: { type: string }
+        description: { type: string }
+        image: { type: string }
+        attractions:
+          type: array
+          items: { type: string }
+        startingPrice: { type: number }
+    Tour:
+      type: object
+      required: [id, title, description, destinations, days, nights, price, style, image, rating, reviews, itinerary, inclusions, exclusions, accommodation, transportation]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        destinations:
+          type: array
+          items: { type: string }
+        days: { type: integer }
+        nights: { type: integer }
+        price: { type: number }
+        style: { type: string }
+        image: { type: string }
+        rating: { type: number }
+        reviews: { type: integer }
+        itinerary:
+          type: array
+          items: { $ref: "#/components/schemas/ItineraryDay" }
+        inclusions:
+          type: array
+          items: { type: string }
+        exclusions:
+          type: array
+          items: { type: string }
+        accommodation: { type: string }
+        transportation: { type: string }
+    ItineraryDay:
+      type: object
+      required: [day, title, details]
+      properties:
+        day: { type: integer }
+        title: { type: string }
+        details: { type: string }
+    User:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        role:
+          type: string
+          enum: [customer, admin]
+    Account:
+      type: object
+      required: [user, orders, customPlans, savedTourIds]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
+        customPlans:
+          type: array
+          items: { $ref: "#/components/schemas/CustomPlan" }
+        savedTourIds:
+          type: array
+          items: { type: integer }
+    RegisterInput:
+      type: object
+      required: [name, email, phone, password]
+      properties:
+        name: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        phone: { type: string, minLength: 7 }
+        password: { type: string, minLength: 6 }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+    OrderInput:
+      type: object
+      required: [tourId, travelDate, travelers, customerName, email, phone]
+      properties:
+        tourId: { type: integer }
+        travelDate: { type: string }
+        travelers: { type: integer, minimum: 1 }
+        customerName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+    Order:
+      type: object
+      required: [id, orderNumber, tourId, tourTitle, travelDate, travelers, amount, paymentStatus, bookingStatus, createdAt]
+      properties:
+        id: { type: integer }
+        orderNumber: { type: string }
+        tourId: { type: integer }
+        tourTitle: { type: string }
+        travelDate: { type: string }
+        travelers: { type: integer }
+        amount: { type: number }
+        paymentStatus: { type: string }
+        bookingStatus: { type: string }
+        createdAt: { type: string }
+    PlannerInput:
+      type: object
+      required: [destinations, startDate, endDate, adults, children, style, interests, accommodation, transportation]
+      properties:
+        destinations:
+          type: array
+          items: { type: string }
+          minItems: 1
+        startDate: { type: string }
+        endDate: { type: string }
+        adults: { type: integer, minimum: 1 }
+        children: { type: integer, minimum: 0 }
+        style: { type: string }
+        interests:
+          type: array
+          items: { type: string }
+        accommodation: { type: string }
+        transportation: { type: string }
+    CustomPlanInput:
+      allOf:
+        - $ref: "#/components/schemas/PlannerInput"
+    CustomPlan:
+      type: object
+      required: [id, destinations, startDate, endDate, duration, travelers, style, interests, accommodation, transportation, estimatedBudget, itinerary, status]
+      properties:
+        id: { type: integer }
+        destinations:
+          type: array
+          items: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        duration: { type: integer }
+        travelers: { type: integer }
+        style: { type: string }
+        interests:
+          type: array
+          items: { type: string }
+        accommodation: { type: string }
+        transportation: { type: string }
+        estimatedBudget: { type: number }
+        itinerary:
+          type: array
+          items: { $ref: "#/components/schemas/ItineraryDay" }
+        status: { type: string }
+    ContactInput:
+      type: object
+      required: [name, email, phone, subject, message]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        subject: { type: string }
+        message: { type: string, minLength: 5 }
+    MessageResult:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    AdminSummary:
+      type: object
+      required: [totalUsers, totalTours, totalOrders, totalPlans, revenue, recentOrders]
+      properties:
+        totalUsers: { type: integer }
+        totalTours: { type: integer }
+        totalOrders: { type: integer }
+        totalPlans: { type: integer }
+        revenue: { type: number }
+        recentOrders:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
 

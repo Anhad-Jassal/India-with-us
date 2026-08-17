@@ -1,0 +1,1 @@
+- [Generated Zod compatibility](zod-codegen.md) — Orval's current Zod output uses Zod 4 top-level helpers; keep the generated validation package on Zod 4.

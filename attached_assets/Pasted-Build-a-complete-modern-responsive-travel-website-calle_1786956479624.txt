@@ -1,0 +1,1096 @@
+Build a complete, modern, responsive travel website called **“India With Us”**.
+
+## 1. Website Concept
+
+“India With Us” is a travel platform focused exclusively on **destinations within India**.
+
+The website should allow:
+
+1. Customers to browse and search Indian travel destinations.
+2. Customers to view and purchase ready-made tour plans uploaded by the website administrator.
+3. Customers to create their own customized tour plans.
+4. The admin to upload, edit, delete, and manage tour plans.
+5. Customers to create accounts, log in, and manage their plans/purchases.
+6. Customers to contact us through a Help/Contact section.
+7. The administrator to manage important website content through an admin dashboard.
+
+The website should feel like a professional Indian travel startup, not a generic template.
+
+---
+
+# 2. Technology
+
+Build this as a full-stack web application.
+
+Use a modern, reliable stack such as:
+
+* React / Next.js for the frontend
+* Node.js for backend functionality if required
+* PostgreSQL for the database
+* Tailwind CSS for styling
+* Proper authentication with secure password hashing
+* Responsive design for desktop, tablet, and mobile
+
+Use clean, modular, maintainable code.
+
+If Replit has a recommended current full-stack setup, use the most stable option available.
+
+The application must be fully functional rather than a static mockup.
+
+---
+
+# 3. Branding
+
+Website name:
+
+**India With Us**
+
+Suggested tagline:
+
+**“Discover India. Your Way.”**
+
+Create a professional travel-focused visual identity.
+
+Design style:
+
+* Modern
+* Clean
+* Warm
+* Premium but affordable
+* Indian travel inspired
+* Easy to navigate
+* Large destination photography
+* Rounded cards
+* Clear buttons
+* Plenty of whitespace
+
+Use a tasteful travel color palette inspired by India, such as warm saffron/orange, deep blue, white, and subtle green accents.
+
+Do not make the website look overly complicated.
+
+---
+
+# 4. Main Navigation
+
+Create a responsive navigation bar containing:
+
+* India With Us logo/name
+* Home
+* Explore Tours
+* Plan Your Trip
+* Destinations
+* Help
+* Login / Sign Up
+
+After login, show:
+
+* My Account
+* My Tours
+* My Custom Plans
+* Logout
+
+For administrators, also show:
+
+* Admin Dashboard
+
+The navigation should collapse into a mobile hamburger menu on small screens.
+
+---
+
+# 5. HOME PAGE
+
+Create a beautiful travel homepage.
+
+Hero section:
+
+Large Indian travel image/background.
+
+Headline:
+
+**“Discover India. Your Way.”**
+
+Subheading:
+
+**“Explore ready-made journeys or create a trip that’s uniquely yours.”**
+
+Include:
+
+* Search bar
+* Destination search
+* “Explore Tours” button
+* “Plan Your Trip” button
+
+Example search placeholder:
+
+**“Where in India do you want to go?”**
+
+---
+
+## Popular Destinations
+
+Create destination cards for popular Indian destinations, including examples such as:
+
+* Delhi
+* Agra
+* Jaipur
+* Udaipur
+* Goa
+* Manali
+* Shimla
+* Kashmir
+* Kerala
+* Mumbai
+* Rishikesh
+* Amritsar
+* Varanasi
+* Hyderabad
+* Bengaluru
+* Darjeeling
+* Andaman
+* Leh-Ladakh
+
+Make the destination system database-driven so the admin can add/edit/remove destinations later.
+
+Each destination card should contain:
+
+* Image
+* Destination name
+* Short description
+* Approximate starting price if applicable
+* “Explore” button
+
+---
+
+# 6. READY-MADE TOUR PLANS
+
+Create an **Explore Tours** page.
+
+This is the marketplace where customers can browse tour plans uploaded by the admin.
+
+Each tour card should display:
+
+* Tour name
+* Destination(s)
+* Number of days
+* Number of nights
+* Starting price
+* Cover image
+* Short description
+* Rating/review area
+* “View Tour” button
+
+Add filtering options:
+
+* Destination
+* Budget
+* Number of days
+* Travel style
+* Popularity
+* Price: Low to High
+* Price: High to Low
+
+Travel styles can include:
+
+* Family
+* Couple
+* Adventure
+* Honeymoon
+* Solo
+* Luxury
+* Budget
+* Spiritual
+* Weekend
+* Cultural
+* Wildlife
+* Beach
+* Mountains
+
+---
+
+# 7. TOUR DETAILS PAGE
+
+When a customer opens a tour, show a detailed page.
+
+Include:
+
+* Large tour images
+* Tour title
+* Destination
+* Duration
+* Price
+* Short overview
+* Day-by-day itinerary
+* Included services
+* Not included
+* Hotels/accommodation information
+* Transportation information
+* Important information
+* Cancellation/refund information
+* Reviews
+
+Show a prominent:
+
+**“Buy This Tour Plan”**
+
+button.
+
+The customer should be able to purchase the tour plan.
+
+---
+
+# 8. TOUR PURCHASE SYSTEM
+
+Implement a proper purchase flow.
+
+Customer clicks:
+
+**Buy This Tour Plan**
+
+Then show:
+
+* Tour summary
+* Price
+* Customer information
+* Number of travelers
+* Travel date
+* Contact information
+* Total price
+
+Create a checkout/payment-ready architecture.
+
+If a real payment gateway is not configured yet, create a **demo/test checkout system** and structure the code so a payment provider such as Razorpay or Stripe can be added later.
+
+Do NOT store raw card details.
+
+After purchase:
+
+* Create an order/booking record in the database.
+* Show confirmation.
+* Add the purchased tour to **My Tours**.
+* Give the customer access to their purchased itinerary.
+
+---
+
+# 9. CUSTOM TOUR PLANNER
+
+Create a major feature called:
+
+**Plan Your Trip**
+
+Customers should be able to create their own India trip.
+
+Build a simple step-by-step planner.
+
+### Step 1 — Destination
+
+Customer selects one or multiple Indian destinations.
+
+Example:
+
+Delhi → Agra → Jaipur
+
+### Step 2 — Dates
+
+Allow customers to select:
+
+* Start date
+* End date
+
+Automatically calculate trip duration.
+
+### Step 3 — Travelers
+
+Ask:
+
+* Adults
+* Children
+
+### Step 4 — Travel Style
+
+Allow selection:
+
+* Budget
+* Standard
+* Premium
+* Luxury
+* Adventure
+* Family
+* Couple
+* Solo
+
+### Step 5 — Interests
+
+Allow customers to select:
+
+* Food
+* History
+* Culture
+* Beaches
+* Mountains
+* Wildlife
+* Shopping
+* Spirituality
+* Adventure
+* Photography
+* Nightlife
+
+### Step 6 — Accommodation
+
+Allow customers to choose:
+
+* Budget
+* 3 Star
+* 4 Star
+* 5 Star
+* Luxury
+
+### Step 7 — Transportation
+
+Options:
+
+* Flights
+* Trains
+* Private car
+* Bus
+* Mixed
+
+### Step 8 — Generate Plan
+
+Show a customized itinerary based on the customer's selections.
+
+Display:
+
+* Destinations
+* Number of days
+* Suggested activities
+* Suggested hotels
+* Suggested transportation
+* Estimated budget
+* Day-by-day itinerary
+
+Give the customer options:
+
+**Save My Plan**
+
+**Edit Plan**
+
+**Request Assistance**
+
+**Purchase / Book Plan**
+
+The custom plan should be saved to the customer's account.
+
+---
+
+# 10. MY ACCOUNT
+
+Create a customer dashboard.
+
+Sections:
+
+### Profile
+
+Allow users to manage:
+
+* Name
+* Email
+* Phone number
+* Profile information
+
+### My Tours
+
+Display purchased tour plans.
+
+### My Custom Plans
+
+Display custom itineraries created by the user.
+
+### Orders
+
+Show:
+
+* Order number
+* Tour
+* Date
+* Amount
+* Status
+
+### Saved Tours
+
+Allow users to bookmark/favorite tours.
+
+---
+
+# 11. LOGIN / SIGN UP
+
+Create a professional authentication system.
+
+Login fields:
+
+* Email
+* Password
+
+Sign-up fields:
+
+* Full name
+* Email
+* Phone number
+* Password
+* Confirm password
+
+Include:
+
+* Forgot password
+* Remember login/session
+* Logout
+
+Passwords must be securely hashed.
+
+Users should have roles:
+
+* Customer
+* Admin
+
+Do not allow normal users to access admin functionality.
+
+---
+
+# 12. ADMIN DASHBOARD
+
+Create a protected admin dashboard.
+
+The admin should be able to manage the entire website.
+
+Dashboard overview should show:
+
+* Total users
+* Total tours
+* Total orders
+* Total custom plans
+* Revenue
+* Recent orders
+
+---
+
+## Admin Tour Management
+
+Admin can:
+
+* Add tour
+* Edit tour
+* Delete tour
+* Publish/unpublish tour
+* Upload tour images
+* Set price
+* Set destination
+* Set duration
+* Add itinerary
+* Add inclusions
+* Add exclusions
+* Add accommodation details
+* Add transportation details
+
+Create an easy form for adding tours.
+
+The admin should not need to edit code to add a tour.
+
+---
+
+# 13. ADMIN DESTINATION MANAGEMENT
+
+Admin should be able to:
+
+* Add destination
+* Edit destination
+* Delete destination
+* Upload destination image
+* Add description
+* Add state
+* Add region
+* Add popular attractions
+
+All destinations must be within India.
+
+---
+
+# 14. ADMIN ORDER MANAGEMENT
+
+Admin can see all orders.
+
+Display:
+
+* Order ID
+* Customer
+* Tour
+* Number of travelers
+* Travel date
+* Amount
+* Payment status
+* Booking status
+
+Allow admin to change booking status:
+
+* Pending
+* Confirmed
+* Cancelled
+* Completed
+
+---
+
+# 15. ADMIN USER MANAGEMENT
+
+Admin can view registered users.
+
+Show:
+
+* Name
+* Email
+* Phone
+* Registration date
+* Number of purchases
+
+Allow admin to deactivate accounts if necessary.
+
+---
+
+# 16. ADMIN CUSTOM TRIP REQUESTS
+
+Admin should have a section where they can see custom travel plans created by customers.
+
+Display:
+
+* Customer
+* Destinations
+* Travel dates
+* Number of travelers
+* Travel style
+* Estimated budget
+* Customer notes
+* Request status
+
+Allow admin to respond/update the request.
+
+Statuses:
+
+* New
+* Reviewing
+* Contacted
+* Confirmed
+* Completed
+
+---
+
+# 17. SEARCH
+
+Create a global travel search bar.
+
+Customers should be able to search destinations and tours.
+
+Examples:
+
+“Goa”
+
+“Manali”
+
+“Kashmir”
+
+“Rajasthan”
+
+“Kerala”
+
+Search should return relevant:
+
+* Destinations
+* Tours
+
+Include useful filters.
+
+Search should work on both desktop and mobile.
+
+---
+
+# 18. DESTINATIONS PAGE
+
+Create a dedicated **Destinations** page.
+
+Organize destinations by region:
+
+### North India
+
+### South India
+
+### East India
+
+### West India
+
+### Northeast India
+
+### Central India
+
+### Union Territories / Islands
+
+Each destination should have:
+
+* Image
+* Name
+* State/region
+* Description
+* Popular attractions
+* Available tour plans
+
+Only include Indian destinations.
+
+---
+
+# 19. HELP PAGE
+
+Create a dedicated Help page.
+
+Include frequently asked questions such as:
+
+### How do I purchase a tour?
+
+### Can I create my own itinerary?
+
+### Can I modify a tour?
+
+### How do payments work?
+
+### Can I cancel my booking?
+
+### What happens after I purchase a tour?
+
+### How do I contact India With Us?
+
+### Can I request a customized trip?
+
+Create an FAQ accordion.
+
+Also include a contact/help form with:
+
+* Name
+* Email
+* Phone
+* Subject
+* Message
+
+Add:
+
+**“Send Message”**
+
+button.
+
+---
+
+# 20. CONTACT INFORMATION
+
+Create a highly visible place for the business contact information.
+
+Use placeholder values for now:
+
+**Phone:** +91 XXXXX XXXXX
+
+**Email:** [hello@indiawithus.com](mailto:hello@indiawithus.com)
+
+Make these values easy for the admin to change later.
+
+Display contact information in:
+
+* Header/contact area if appropriate
+* Help page
+* Footer
+* Contact section
+
+The phone number should be clickable on mobile.
+
+---
+
+# 21. FOOTER
+
+Create a professional footer.
+
+Include:
+
+**India With Us**
+
+“Discover India. Your Way.”
+
+Links:
+
+* Home
+* Explore Tours
+* Plan Your Trip
+* Destinations
+* Help
+* Contact
+* Login
+* Privacy Policy
+* Terms & Conditions
+* Cancellation Policy
+
+Also include:
+
+* Phone
+* Email
+* Social media placeholders
+* Copyright
+
+---
+
+# 22. DATABASE
+
+Create a proper relational database.
+
+At minimum, include tables/models for:
+
+### Users
+
+* id
+* name
+* email
+* phone
+* password_hash
+* role
+* created_at
+
+### Destinations
+
+* id
+* name
+* state
+* region
+* description
+* image
+* attractions
+* created_at
+
+### Tours
+
+* id
+* title
+* description
+* destinations
+* duration
+* price
+* travel_style
+* cover_image
+* itinerary
+* inclusions
+* exclusions
+* accommodation
+* transportation
+* published
+* created_at
+
+### Orders
+
+* id
+* user_id
+* tour_id
+* travel_date
+* travelers
+* amount
+* payment_status
+* booking_status
+* created_at
+
+### Custom Trips
+
+* id
+* user_id
+* destinations
+* start_date
+* end_date
+* travelers
+* travel_style
+* interests
+* accommodation
+* transportation
+* estimated_budget
+* itinerary
+* status
+* created_at
+
+### Reviews
+
+* id
+* user_id
+* tour_id
+* rating
+* comment
+* created_at
+
+### Contact Messages
+
+* id
+* name
+* email
+* phone
+* subject
+* message
+* status
+* created_at
+
+Structure the database so it can easily be expanded later.
+
+---
+
+# 23. SECURITY
+
+Implement basic production-quality security.
+
+Requirements:
+
+* Secure password hashing
+* Authentication
+* Authorization
+* Protected admin routes
+* Input validation
+* Server-side validation
+* Protection against unauthorized admin access
+* Do not expose passwords
+* Do not store raw payment card information
+* Sanitize user-generated content where appropriate
+
+---
+
+# 24. RESPONSIVE DESIGN
+
+The website MUST work properly on:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+Pay particular attention to:
+
+* Navigation
+* Search
+* Tour cards
+* Forms
+* Checkout
+* Custom trip planner
+* Admin dashboard
+
+The mobile experience should feel like a real mobile travel website.
+
+---
+
+# 25. IMAGES
+
+Use high-quality travel imagery representing India.
+
+Images should feature destinations such as:
+
+* Taj Mahal
+* Rajasthan
+* Goa beaches
+* Himalayan mountains
+* Kerala backwaters
+* Kashmir
+* Varanasi
+* Amritsar
+* Ladakh
+* Mumbai
+* Delhi
+* Northeast India
+
+Do not use unrelated foreign destinations.
+
+If image URLs are needed initially, use reliable publicly accessible image sources/placeholders and structure the database so the admin can replace images later.
+
+---
+
+# 26. HOME PAGE SECTIONS
+
+The home page should contain approximately:
+
+1. Navigation
+2. Hero section
+3. Search bar
+4. Popular destinations
+5. Featured tour plans
+6. “Create Your Own Trip” section
+7. Why India With Us
+8. How It Works
+9. Customer reviews
+10. FAQ preview
+11. Contact section
+12. Footer
+
+---
+
+# 27. HOW IT WORKS
+
+Create a simple visual section:
+
+### 1. Explore
+
+Find an Indian destination or ready-made tour.
+
+### 2. Choose
+
+Select a tour or build your own itinerary.
+
+### 3. Book
+
+Purchase your chosen travel plan.
+
+### 4. Travel
+
+Enjoy your journey across India.
+
+---
+
+# 28. WHY INDIA WITH US
+
+Create cards for:
+
+* India-focused travel
+* Ready-made itineraries
+* Custom trip planning
+* Easy booking
+* Transparent pricing
+* Helpful support
+
+---
+
+# 29. REVIEWS
+
+Create a customer review section.
+
+Initially use sample/demo reviews clearly structured so they can later be replaced with real customer reviews.
+
+Customers who have purchased tours should be able to leave reviews.
+
+Only allow logged-in customers to submit reviews.
+
+---
+
+# 30. ADMIN SETTINGS
+
+Create a basic Settings section where the admin can change:
+
+* Website name
+* Tagline
+* Phone number
+* Email
+* Logo
+* Social media links
+* Footer information
+
+This means I should not have to edit the source code just to change my phone number or email.
+
+---
+
+# 31. ERROR AND EMPTY STATES
+
+Create polished messages for:
+
+* No tours found
+* No search results
+* Invalid login
+* Failed checkout
+* Empty saved tours
+* Empty custom trips
+* Unauthorized admin access
+* Missing destination
+* Failed form submission
+
+Do not leave blank screens.
+
+---
+
+# 32. DEMO DATA
+
+When the application first runs, populate it with realistic demo data.
+
+Include at least:
+
+* 10+ Indian destinations
+* 8+ sample tour plans
+* Sample itineraries
+* Sample travel categories
+* Sample reviews
+
+Make sure demo data can be deleted/edited from the admin dashboard.
+
+---
+
+# 33. ADMIN LOGIN
+
+Create a secure admin account through environment variables or a proper setup process.
+
+Do NOT hard-code an admin password directly into frontend code.
+
+Provide clear setup instructions for creating the first admin account.
+
+---
+
+# 34. IMPORTANT USER EXPERIENCE REQUIREMENT
+
+The website should feel like an actual travel marketplace.
+
+A visitor should immediately understand:
+
+**“I can either buy a ready-made India tour or create my own trip.”**
+
+Make these the two primary calls to action:
+
+**EXPLORE TOURS**
+
+and
+
+**PLAN YOUR TRIP**
+
+---
+
+# 35. FINAL REQUIREMENT
+
+Do not stop after creating the homepage.
+
+Build the complete working application including:
+
+* Frontend
+* Backend
+* Database
+* Authentication
+* Customer dashboard
+* Tour marketplace
+* Custom trip planner
+* Checkout/order system
+* Admin dashboard
+* Destination management
+* Tour management
+* User management
+* Help page
+* Contact system
+* Search
+* Responsive mobile design
+
+Use reusable components and clean architecture.
+
+After building, test all major user flows:
+
+1. Visitor opens homepage.
+2. Visitor searches for a destination.
+3. Visitor views a tour.
+4. Visitor creates an account.
+5. User logs in.
+6. User purchases a tour using the test/demo checkout.
+7. Purchased tour appears in My Tours.
+8. User creates a custom itinerary.
+9. User saves the custom itinerary.
+10. Admin logs in.
+11. Admin creates a new tour.
+12. New tour appears on the public website.
+13. Admin edits a tour.
+14. Admin views orders.
+15. Admin views users.
+16. Customer submits a Help/contact request.
+17. Website works correctly on mobile.
+
+Fix any errors found during testing.
+
+The final result should be a polished, professional, functional travel platform called **India With Us**, focused exclusively on travel within India.
