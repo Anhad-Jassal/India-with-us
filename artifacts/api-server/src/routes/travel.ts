@@ -95,7 +95,15 @@ const tours: Tour[] = [
   { id: 6, title: "Sacred river, open heart", description: "A thoughtful journey through Varanasi, Sarnath, and Rishikesh.", destinations: ["Varanasi", "Rishikesh"], days: 6, nights: 5, price: 22999, style: "Spiritual", image: image("photo-1561361058-c24cecae35ca"), rating: 4.8, reviews: 52, itinerary: [{ day: 1, title: "Arrive by the Ganga", details: "Evening boat ride and Ganga Aarti." }, { day: 2, title: "Varanasi at dawn", details: "Walk the ghats with a local storyteller." }, { day: 3, title: "Sarnath", details: "Visit Sarnath and travel onward." }, { day: 4, title: "Rishikesh", details: "Riverside cafés and evening yoga." }, { day: 5, title: "River and forest", details: "Choose rafting or a quiet forest walk." }, { day: 6, title: "Depart", details: "Breakfast and onward travel." }], inclusions: ["Hotels", "Breakfast", "Boat ride", "Local guide"], exclusions: ["Flights", "Rafting", "Personal expenses"], accommodation: "Heritage and riverside stays", transportation: "Private transfers" },
 ];
 
-const users: Array<User & { passwordHash: string }> = [];
+const users: Array<User & { passwordHash: string }> = [
+  {
+    id: 1,
+    name: "Anhad Jassal",
+    email: "anhadjassal2013@gmail.com",
+    role: "admin",
+    passwordHash: "d3afd5512a6adea84c1fdbac6c10cabf38afe9415e667f3d63eb763a95160d18",
+  },
+];
 const sessions = new Map<string, number>();
 const orders: Order[] = [];
 const customPlans: CustomPlan[] = [];
@@ -104,6 +112,14 @@ const getUser = (req: Request) => {
   const session = req.headers.cookie?.match(/iwu_session=([^;]+)/)?.[1];
   const id = session ? sessions.get(session) : undefined;
   return users.find((user) => user.id === id);
+};
+const requireAdmin = (req: Request, res: { status: (code: number) => { json: (body: object) => void } }) => {
+  const user = getUser(req);
+  if (!user || user.role !== "admin") {
+    res.status(403).json({ error: "Admin access is required." });
+    return null;
+  }
+  return user;
 };
 const hashPassword = (password: string) => crypto.scryptSync(password, "india-with-us", 32).toString("hex");
 const publicUser = (user: User & { passwordHash: string }): User => ({ id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role });
@@ -253,7 +269,8 @@ router.post("/contact", (req, res) => {
   }
   res.status(201).json({ message: "Thanks — our travel team will be in touch shortly." });
 });
-router.get("/admin/summary", (_req, res) => {
+router.get("/admin/summary", (req, res) => {
+  if (!requireAdmin(req, res)) return;
   res.json({ totalUsers: users.length, totalTours: tours.length, totalOrders: orders.length, totalPlans: customPlans.length, revenue: orders.reduce((sum, order) => sum + order.amount, 0), recentOrders: orders.slice(0, 5) });
 });
 
