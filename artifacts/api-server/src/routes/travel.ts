@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request } from "express";
 import crypto from "node:crypto";
+import { pool } from "@workspace/db";
 import {
   CreateCustomPlanBody,
   CreateOrderBody,
@@ -95,26 +96,26 @@ const tours: Tour[] = [
   { id: 6, title: "Sacred river, open heart", description: "A thoughtful journey through Varanasi, Sarnath, and Rishikesh.", destinations: ["Varanasi", "Rishikesh"], days: 6, nights: 5, price: 22999, style: "Spiritual", image: image("photo-1561361058-c24cecae35ca"), rating: 4.8, reviews: 52, itinerary: [{ day: 1, title: "Arrive by the Ganga", details: "Evening boat ride and Ganga Aarti." }, { day: 2, title: "Varanasi at dawn", details: "Walk the ghats with a local storyteller." }, { day: 3, title: "Sarnath", details: "Visit Sarnath and travel onward." }, { day: 4, title: "Rishikesh", details: "Riverside cafés and evening yoga." }, { day: 5, title: "River and forest", details: "Choose rafting or a quiet forest walk." }, { day: 6, title: "Depart", details: "Breakfast and onward travel." }], inclusions: ["Hotels", "Breakfast", "Boat ride", "Local guide"], exclusions: ["Flights", "Rafting", "Personal expenses"], accommodation: "Heritage and riverside stays", transportation: "Private transfers" },
 ];
 
-const users: Array<User & { passwordHash: string }> = [
-  {
-    id: 1,
-    name: "Anhad Jassal",
-    email: "anhadjassal2013@gmail.com",
-    role: "admin",
-    passwordHash: "d3afd5512a6adea84c1fdbac6c10cabf38afe9415e667f3d63eb763a95160d18",
-  },
-];
 const sessions = new Map<string, number>();
-const orders: Order[] = [];
-const customPlans: CustomPlan[] = [];
+const adminReady = pool.query(
+  `INSERT INTO users (name, email, role, password_hash)
+   VALUES ($1, $2, 'admin', $3)
+   ON CONFLICT (email) DO UPDATE SET role = 'admin'`,
+  ["Anhad Jassal", "anhadjassal2013@gmail.com", "d3afd5512a6adea84c1fdbac6c10cabf38afe9415e667f3d63eb763a95160d18"],
+);
 
-const getUser = (req: Request) => {
+const getUser = async (req: Request) => {
   const session = req.headers.cookie?.match(/iwu_session=([^;]+)/)?.[1];
   const id = session ? sessions.get(session) : undefined;
-  return users.find((user) => user.id === id);
+  if (!id) return null;
+  const result = await pool.query<User & { passwordHash: string }>(
+    "SELECT id, name, email, phone, role, password_hash AS \"passwordHash\" FROM users WHERE id = $1",
+    [id],
+  );
+  return result.rows[0] || null;
 };
-const requireAdmin = (req: Request, res: { status: (code: number) => { json: (body: object) => void } }) => {
-  const user = getUser(req);
+const requireAdmin = async (req: Request, res: { status: (code: number) => { json: (body: object) => void } }) => {
+  const user = await getUser(req);
   if (!user || user.role !== "admin") {
     res.status(403).json({ error: "Admin access is required." });
     return null;
@@ -170,22 +171,35 @@ router.post("/auth/register", (req, res) => {
     res.status(400).json({ error: "Please check your details and try again." });
     return;
   }
-  if (users.some((user) => user.email === parsed.data.email)) {
-    res.status(409).json({ error: "An account with that email already exists." });
-    return;
-  }
-  const user = { id: users.length + 1, name: parsed.data.name, email: parsed.data.email, phone: parsed.data.phone, role: "customer" as const, passwordHash: hashPassword(parsed.data.password) };
-  users.push(user);
-  setSession(res, user.id);
-  res.status(201).json(publicUser(user));
+  adminReady.then(async () => {
+    try {
+      const result = await pool.query<User & { passwordHash: string }>(
+        `INSERT INTO users (name, email, phone, role, password_hash)
+         VALUES ($1, $2, $3, 'customer', $4)
+         RETURNING id, name, email, phone, role, password_hash AS "passwordHash"`,
+        [parsed.data.name, parsed.data.email, parsed.data.phone || null, hashPassword(parsed.data.password)],
+      );
+      const user = result.rows[0];
+      setSession(res, user.id);
+      res.status(201).json(publicUser(user));
+    } catch (error: any) {
+      if (error?.code === "23505") res.status(409).json({ error: "An account with that email already exists." });
+      else res.status(500).json({ error: "Could not create your account." });
+    }
+  });
 });
-router.post("/auth/login", (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
-  const user = users.find((item) => item.email === parsed.data.email);
+  await adminReady;
+  const result = await pool.query<User & { passwordHash: string }>(
+    `SELECT id, name, email, phone, role, password_hash AS "passwordHash" FROM users WHERE email = $1`,
+    [parsed.data.email],
+  );
+  const user = result.rows[0];
   if (!user || user.passwordHash !== hashPassword(parsed.data.password)) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
@@ -199,22 +213,29 @@ router.post("/auth/logout", (req, res) => {
   res.clearCookie("iwu_session");
   res.status(204).send();
 });
-router.get("/account", (req, res) => {
-  const user = getUser(req);
+router.get("/account", async (req, res) => {
+  await adminReady;
+  const user = await getUser(req);
   if (!user) {
     res.status(401).json({ error: "Please log in to view your account." });
     return;
   }
-  res.json({ user: publicUser(user), orders, customPlans, savedTourIds: [] });
+  const [ordersResult, plansResult] = await Promise.all([
+    pool.query<Order>("SELECT id, order_number AS \"orderNumber\", tour_id AS \"tourId\", tour_title AS \"tourTitle\", travel_date AS \"travelDate\", travelers, amount, payment_status AS \"paymentStatus\", booking_status AS \"bookingStatus\", created_at AS \"createdAt\" FROM orders WHERE user_id = $1 ORDER BY created_at DESC", [user.id]),
+    pool.query<CustomPlan>("SELECT id, destinations, start_date AS \"startDate\", end_date AS \"endDate\", duration, travelers, style, interests, accommodation, transportation, estimated_budget AS \"estimatedBudget\", itinerary, status FROM custom_plans WHERE user_id = $1 ORDER BY created_at DESC", [user.id]),
+  ]);
+  res.json({ user: publicUser(user), orders: ordersResult.rows, customPlans: plansResult.rows, savedTourIds: [] });
 });
-router.get("/orders", (req, res) => {
-  if (!getUser(req)) {
+router.get("/orders", async (req, res) => {
+  const user = await getUser(req);
+  if (!user) {
     res.status(401).json({ error: "Please log in to view orders." });
     return;
   }
-  res.json(orders);
+  const result = await pool.query<Order>("SELECT id, order_number AS \"orderNumber\", tour_id AS \"tourId\", tour_title AS \"tourTitle\", travel_date AS \"travelDate\", travelers, amount, payment_status AS \"paymentStatus\", booking_status AS \"bookingStatus\", created_at AS \"createdAt\" FROM orders WHERE user_id = $1 ORDER BY created_at DESC", [user.id]);
+  res.json(result.rows);
 });
-router.post("/orders", (req, res) => {
+router.post("/orders", async (req, res) => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Please complete all checkout details." });
@@ -225,16 +246,23 @@ router.post("/orders", (req, res) => {
     res.status(404).json({ error: "Tour not found." });
     return;
   }
-  const order: Order = { id: orders.length + 1, orderNumber: `IWU-${String(orders.length + 1).padStart(5, "0")}`, tourId: tour.id, tourTitle: tour.title, travelDate: parsed.data.travelDate, travelers: parsed.data.travelers, amount: tour.price * parsed.data.travelers, paymentStatus: "Demo paid", bookingStatus: "Confirmed", createdAt: new Date().toISOString() };
-  orders.unshift(order);
-  res.status(201).json(order);
+  const user = await getUser(req);
+  const count = await pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM orders");
+  const orderNumber = `IWU-${String(Number(count.rows[0].count) + 1).padStart(5, "0")}`;
+  const result = await pool.query<Order>(
+    `INSERT INTO orders (user_id, order_number, tour_id, tour_title, travel_date, travelers, amount, payment_status, booking_status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'Demo paid', 'Confirmed')
+     RETURNING id, order_number AS "orderNumber", tour_id AS "tourId", tour_title AS "tourTitle", travel_date AS "travelDate", travelers, amount, payment_status AS "paymentStatus", booking_status AS "bookingStatus", created_at AS "createdAt"`,
+    [user?.id || null, orderNumber, tour.id, tour.title, parsed.data.travelDate, parsed.data.travelers, tour.price * parsed.data.travelers],
+  );
+  res.status(201).json(result.rows[0]);
 });
 const buildPlan = (input: { destinations: string[]; startDate: string; endDate: string; adults: number; children: number; style: string; interests: string[]; accommodation: string; transportation: string }): CustomPlan => {
   const duration = durationBetween(input.startDate, input.endDate);
   const travelers = input.adults + input.children;
   const multiplier = input.accommodation === "Luxury" || input.accommodation === "5 Star" ? 1.9 : input.accommodation === "4 Star" ? 1.5 : input.accommodation === "3 Star" ? 1.2 : 0.9;
   const base = 3800 * travelers * duration * multiplier;
-  return { id: customPlans.length + 1, destinations: input.destinations, startDate: input.startDate, endDate: input.endDate, duration, travelers, style: input.style, interests: input.interests, accommodation: input.accommodation, transportation: input.transportation, estimatedBudget: Math.round(base), status: "Draft", itinerary: Array.from({ length: Math.min(duration, 8) }, (_, index) => ({ day: index + 1, title: `${input.destinations[index % input.destinations.length]} · day ${index + 1}`, details: `${input.interests.slice(0, 2).join(" and ") || "local discovery"} with a ${input.style.toLowerCase()} pace, traveling by ${input.transportation.toLowerCase()}.` })) };
+  return { id: 0, destinations: input.destinations, startDate: input.startDate, endDate: input.endDate, duration, travelers, style: input.style, interests: input.interests, accommodation: input.accommodation, transportation: input.transportation, estimatedBudget: Math.round(base), status: "Draft", itinerary: Array.from({ length: Math.min(duration, 8) }, (_, index) => ({ day: index + 1, title: `${input.destinations[index % input.destinations.length]} · day ${index + 1}`, details: `${input.interests.slice(0, 2).join(" and ") || "local discovery"} with a ${input.style.toLowerCase()} pace, traveling by ${input.transportation.toLowerCase()}.` })) };
 };
 router.post("/planner/generate", (req, res) => {
   const parsed = GenerateCustomPlanBody.safeParse(req.body);
@@ -244,22 +272,34 @@ router.post("/planner/generate", (req, res) => {
   }
   res.json(buildPlan(parsed.data));
 });
-router.get("/custom-plans", (req, res) => {
-  if (!getUser(req)) {
+router.get("/custom-plans", async (req, res) => {
+  const user = await getUser(req);
+  if (!user) {
     res.status(401).json({ error: "Please log in to view saved plans." });
     return;
   }
-  res.json(customPlans);
+  const result = await pool.query<CustomPlan>("SELECT id, destinations, start_date AS \"startDate\", end_date AS \"endDate\", duration, travelers, style, interests, accommodation, transportation, estimated_budget AS \"estimatedBudget\", itinerary, status FROM custom_plans WHERE user_id = $1 ORDER BY created_at DESC", [user.id]);
+  res.json(result.rows);
 });
-router.post("/custom-plans", (req, res) => {
+router.post("/custom-plans", async (req, res) => {
   const parsed = CreateCustomPlanBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Please complete the planner steps." });
     return;
   }
-  const plan = buildPlan(parsed.data);
-  customPlans.unshift(plan);
-  res.status(201).json(plan);
+  const user = await getUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Please log in to save a custom plan." });
+    return;
+  }
+  const plan = buildPlan({ ...parsed.data, destinations: parsed.data.destinations });
+  const result = await pool.query<CustomPlan>(
+    `INSERT INTO custom_plans (user_id, destinations, start_date, end_date, duration, travelers, style, interests, accommodation, transportation, estimated_budget, itinerary, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+     RETURNING id, destinations, start_date AS "startDate", end_date AS "endDate", duration, travelers, style, interests, accommodation, transportation, estimated_budget AS "estimatedBudget", itinerary, status`,
+    [user.id, JSON.stringify(plan.destinations), plan.startDate, plan.endDate, plan.duration, plan.travelers, plan.style, JSON.stringify(plan.interests), plan.accommodation, plan.transportation, plan.estimatedBudget, JSON.stringify(plan.itinerary), plan.status],
+  );
+  res.status(201).json(result.rows[0]);
 });
 router.post("/contact", (req, res) => {
   const parsed = SendContactMessageBody.safeParse(req.body);
@@ -269,9 +309,16 @@ router.post("/contact", (req, res) => {
   }
   res.status(201).json({ message: "Thanks — our travel team will be in touch shortly." });
 });
-router.get("/admin/summary", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  res.json({ totalUsers: users.length, totalTours: tours.length, totalOrders: orders.length, totalPlans: customPlans.length, revenue: orders.reduce((sum, order) => sum + order.amount, 0), recentOrders: orders.slice(0, 5) });
+router.get("/admin/summary", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const [usersResult, ordersResult, plansResult, revenueResult, recentResult] = await Promise.all([
+    pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM users"),
+    pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM orders"),
+    pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM custom_plans"),
+    pool.query<{ revenue: string }>("SELECT COALESCE(SUM(amount), 0)::text AS revenue FROM orders"),
+    pool.query<Order>("SELECT id, order_number AS \"orderNumber\", tour_id AS \"tourId\", tour_title AS \"tourTitle\", travel_date AS \"travelDate\", travelers, amount, payment_status AS \"paymentStatus\", booking_status AS \"bookingStatus\", created_at AS \"createdAt\" FROM orders ORDER BY created_at DESC LIMIT 5"),
+  ]);
+  res.json({ totalUsers: Number(usersResult.rows[0].count), totalTours: tours.length, totalOrders: Number(ordersResult.rows[0].count), totalPlans: Number(plansResult.rows[0].count), revenue: Number(revenueResult.rows[0].revenue), recentOrders: recentResult.rows });
 });
 
 export default router;
