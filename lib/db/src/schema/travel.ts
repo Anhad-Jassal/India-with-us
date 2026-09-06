@@ -7,7 +7,36 @@ export const usersTable = pgTable("users", {
   phone: text("phone"),
   role: text("role").notNull().default("customer"),
   passwordHash: text("password_hash").notNull(),
+  isBlacklisted: integer("is_blacklisted").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const toursTable = pgTable("tours", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  destinations: jsonb("destinations").notNull(),
+  days: integer("days").notNull(),
+  nights: integer("nights").notNull(),
+  price: integer("price").notNull(),
+  style: text("style").notNull(),
+  image: text("image").notNull(),
+  rating: integer("rating").notNull().default(5),
+  reviews: integer("reviews").notNull().default(0),
+  itinerary: jsonb("itinerary").notNull(),
+  inclusions: jsonb("inclusions").notNull(),
+  exclusions: jsonb("exclusions").notNull(),
+  accommodation: text("accommodation").notNull(),
+  transportation: text("transportation").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const siteSettingsTable = pgTable("site_settings", {
+  id: serial("id").primaryKey(),
+  supportEmail: text("support_email").notNull(),
+  supportPhone: text("support_phone").notNull(),
+  whatsapp: text("whatsapp").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const ordersTable = pgTable("orders", {

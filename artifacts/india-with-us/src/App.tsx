@@ -1,14 +1,14 @@
-import { useState, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Link, Route, Switch, useLocation, useParams } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
-  ArrowRight, Check, ChevronRight, CircleHelp,
-  Compass, Heart, IndianRupee, Leaf, LogIn, LogOut, Mail, MapPin, Menu,
+  ArrowRight, Ban, Check, ChevronRight, CircleHelp,
+  Compass, Edit3, Heart, IndianRupee, Leaf, LogIn, LogOut, Mail, MapPin, Menu,
   MessageCircle, Minus, PackageCheck, Phone, Plane,
-  Plus, Search, ShieldCheck, Sparkles, Star, UserRound, Users,
+  Plus, Save, Search, ShieldCheck, Sparkles, Star, Trash2, UserRound, Users,
   X, Zap,
 } from 'lucide-react';
 import {
@@ -71,11 +71,13 @@ function Header() {
 }
 
 function Footer() {
+  const [settings, setSettings] = useState({ supportEmail: 'hello@indiawithus.travel', supportPhone: '+91 80 4123 8800', whatsapp: '+91 90000 12345' });
+  useEffect(() => { fetch('/api/site-settings').then(response => response.ok ? response.json() : null).then(data => data && setSettings(data)).catch(() => undefined); }, []);
   return <footer className="mt-24 bg-secondary text-secondary-foreground"><div className="container-page grid gap-12 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
     <div><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent text-foreground"><Compass size={20} /></span><span className="font-display text-2xl">India with us</span></div><p className="mt-5 max-w-xs text-sm leading-6 text-secondary-foreground/70">Thoughtful journeys across a country too rich for a checklist.</p></div>
     <div><h3 className="mb-4 text-sm font-semibold text-accent">Explore</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><Link href="/tours" className="block hover:text-accent" data-testid="link-footer-tours">Ready-made tours</Link><Link href="/destinations" className="block hover:text-accent" data-testid="link-footer-destinations">Destinations</Link><Link href="/plan" className="block hover:text-accent" data-testid="link-footer-plan">Build your trip</Link></div></div>
     <div><h3 className="mb-4 text-sm font-semibold text-accent">For your peace of mind</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><p>Local support, 7 days</p><p>Clear pricing, always</p><p>Small, trusted partners</p></div></div>
-    <div><h3 className="mb-4 text-sm font-semibold text-accent">Say hello</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><a href="mailto:hello@indiawithus.travel" className="flex items-center gap-2 hover:text-accent" data-testid="link-footer-email"><Mail size={15} /> hello@indiawithus.travel</a><p className="flex items-center gap-2"><Phone size={15} /> +91 80 4123 8800</p></div></div>
+    <div><h3 className="mb-4 text-sm font-semibold text-accent">Say hello</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><a href={`mailto:${settings.supportEmail}`} className="flex items-center gap-2 hover:text-accent" data-testid="link-footer-email"><Mail size={15} /> {settings.supportEmail}</a><p className="flex items-center gap-2"><Phone size={15} /> {settings.supportPhone}</p><p className="text-xs">WhatsApp {settings.whatsapp}</p></div></div>
   </div><div className="border-t border-secondary-foreground/10 py-5 text-center text-xs text-secondary-foreground/50">© 2024 India with us. Made for curious travellers.</div></footer>;
 }
 
@@ -198,9 +200,87 @@ function Admin() {
   if (!account.isLoading && (!account.data || account.data.user.role !== 'admin')) {
     return <Shell><main className="container-page py-20"><div className="mx-auto max-w-lg rounded-3xl border border-border bg-card p-8 text-center"><ShieldCheck className="mx-auto text-primary" size={32} /><h1 className="mt-5 font-display text-4xl">Admin access required</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Sign in with an administrator account to open the operations workspace.</p><Link href="/login" className="mt-7 inline-flex rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Go to admin sign in</Link></div></main></Shell>;
   }
-  const data = summary.data || { totalUsers: 184, totalTours: 24, totalOrders: 67, totalPlans: 38, revenue: 2847600, recentOrders: [] };
+  return <AdminWorkspace summary={summary.data} />;
+}
+
+type AdminTour = {
+  id: number;
+  title: string;
+  description: string;
+  destinations: string[];
+  days: number;
+  nights: number;
+  price: number;
+  style: string;
+  image: string;
+  rating: number;
+  reviews: number;
+  itinerary: Array<{ day: number; title: string; details: string }>;
+  inclusions: string[];
+  exclusions: string[];
+  accommodation: string;
+  transportation: string;
+};
+
+const emptyTour: Omit<AdminTour, 'id'> = {
+  title: '', description: '', destinations: [], days: 5, nights: 4, price: 19999,
+  style: 'Cultural', image: '', rating: 5, reviews: 0, itinerary: [],
+  inclusions: [], exclusions: [], accommodation: 'Boutique hotel', transportation: 'Private car',
+};
+
+function AdminWorkspace({ summary }: { summary: any }) {
+  const [panel, setPanel] = useState<'tours' | 'users' | 'contact'>('tours');
+  const [tours, setTours] = useState<AdminTour[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [settings, setSettings] = useState({ supportEmail: '', supportPhone: '', whatsapp: '' });
+  const [draft, setDraft] = useState<AdminTour | Omit<AdminTour, 'id'>>(emptyTour);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [notice, setNotice] = useState('');
+
+  const api = async (path: string, options?: RequestInit) => {
+    const response = await fetch(`/api${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) }, ...options });
+    if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Request failed');
+    return response.status === 204 ? null : response.json();
+  };
+  const refresh = async () => {
+    const [tourData, userData, settingData] = await Promise.all([api('/admin/tours'), api('/admin/users'), api('/admin/settings')]);
+    setTours(tourData); setUsers(userData); setSettings(settingData);
+  };
+  useEffect(() => { refresh().catch(() => setNotice('Could not load the admin workspace.')); }, []);
+
+  const saveTour = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const body = { ...draft, destinations: typeof draft.destinations === 'string' ? (draft.destinations as unknown as string).split(',').map(item => item.trim()).filter(Boolean) : draft.destinations, inclusions: typeof draft.inclusions === 'string' ? (draft.inclusions as unknown as string).split(',').map(item => item.trim()).filter(Boolean) : draft.inclusions, exclusions: typeof draft.exclusions === 'string' ? (draft.exclusions as unknown as string).split(',').map(item => item.trim()).filter(Boolean) : draft.exclusions };
+      if (editingId) await api(`/admin/tours/${editingId}`, { method: 'PATCH', body: JSON.stringify(body) });
+      else await api('/admin/tours', { method: 'POST', body: JSON.stringify(body) });
+      await refresh(); setDraft(emptyTour); setEditingId(null); setNotice(editingId ? 'Tour updated.' : 'Tour added.');
+    } catch (error: any) { setNotice(error.message); }
+  };
+  const removeTour = async (id: number) => {
+    if (!window.confirm('Remove this tour from the public catalogue?')) return;
+    await api(`/admin/tours/${id}`, { method: 'DELETE' }); await refresh(); setNotice('Tour removed.');
+  };
+  const toggleBlacklist = async (user: any) => {
+    await api(`/admin/users/${user.id}/blacklist`, { method: 'PATCH', body: JSON.stringify({ blacklisted: !user.isBlacklisted }) });
+    await refresh(); setNotice(user.isBlacklisted ? 'Customer access restored.' : 'Customer blacklisted.');
+  };
+  const saveSettings = async (event: FormEvent) => {
+    event.preventDefault(); await api('/admin/settings', { method: 'PATCH', body: JSON.stringify(settings) }); setNotice('Contact details updated.');
+  };
+  const data = summary || { totalUsers: 0, totalTours: tours.length, totalOrders: 0, totalPlans: 0, revenue: 0, recentOrders: [] };
   const stats: Array<[string, number, typeof Users]> = [['People travelling', data.totalUsers, Users], ['Published tours', data.totalTours, Compass], ['Orders this season', data.totalOrders, PackageCheck], ['Custom plans', data.totalPlans, Sparkles]];
-  return <Shell><main className="container-page py-14"><div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Operations / India with us</p><h1 className="mt-3 font-display text-5xl">Good morning, team.</h1></div><span className="rounded-full bg-accent/50 px-4 py-2 text-sm font-semibold">Admin workspace</span></div><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([label, value, Icon]) => <div key={label as string} className="rounded-2xl border border-border bg-card p-5" data-testid={`stat-${label}`}><Icon className="text-primary" size={19} /><p className="mt-6 text-3xl font-semibold">{value as number}</p><p className="mt-1 text-sm text-muted-foreground">{label as string}</p></div>)}</div><div className="mt-10 grid gap-8 lg:grid-cols-[1.2fr_.8fr]"><section className="rounded-2xl border border-border bg-card p-6"><div className="flex items-center justify-between"><h2 className="font-display text-3xl">Recent orders</h2><button className="text-sm font-bold text-primary" data-testid="button-admin-orders">View all</button></div>{data.recentOrders?.length ? <div className="mt-6 space-y-3">{data.recentOrders.map((order: any) => <div key={order.id} className="flex justify-between border-t border-border py-4" data-testid={`row-admin-order-${order.id}`}><div><p className="font-semibold">{order.tourTitle}</p><p className="text-xs text-muted-foreground">{order.orderNumber}</p></div><span className="text-sm">₹{order.amount.toLocaleString('en-IN')}</span></div>)}</div> : <div className="mt-6 rounded-xl bg-muted p-8 text-center"><PackageCheck className="mx-auto text-primary" /><p className="mt-3 font-semibold">The next booking will appear here.</p><p className="mt-1 text-sm text-muted-foreground">Your operation is wonderfully quiet for now.</p></div>}</section><section className="rounded-2xl bg-secondary p-6 text-secondary-foreground"><h2 className="font-display text-3xl">Workspace</h2><div className="mt-6 space-y-2">{['Tours', 'Destinations', 'Orders', 'Users', 'Custom requests', 'Settings'].map(item => <button key={item} className="flex w-full items-center justify-between rounded-xl border border-secondary-foreground/15 p-4 text-left text-sm hover:bg-secondary-foreground/10" data-testid={`button-admin-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}<ChevronRight size={16} className="text-accent" /></button>)}</div></section></div></main></Shell>;
+  const input = (label: string, key: keyof AdminTour, type = 'text') => <label className="block text-sm font-semibold">{label}<input type={type} className="field mt-2" value={Array.isArray((draft as any)[key]) ? (draft as any)[key].join(', ') : (draft as any)[key] ?? ''} onChange={e => setDraft({ ...draft, [key]: ['destinations', 'inclusions', 'exclusions'].includes(key) ? e.target.value : type === 'number' ? Number(e.target.value) : e.target.value } as any)} /></label>;
+
+  return <Shell><main className="container-page py-14">
+    <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Operations / India with us</p><h1 className="mt-3 font-display text-5xl">Good morning, team.</h1></div><span className="rounded-full bg-accent/50 px-4 py-2 text-sm font-semibold">Admin workspace</span></div>
+    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([label, value, Icon]) => <div key={label} className="rounded-2xl border border-border bg-card p-5"><Icon className="text-primary" size={19} /><p className="mt-6 text-3xl font-semibold">{value}</p><p className="mt-1 text-sm text-muted-foreground">{label}</p></div>)}</div>
+    {notice && <p className="mt-6 rounded-xl bg-accent/30 px-4 py-3 text-sm font-semibold">{notice}</p>}
+    <div className="mt-10 flex flex-wrap gap-2 border-b border-border pb-4"><button onClick={() => setPanel('tours')} className={`rounded-full px-4 py-2 text-sm font-bold ${panel === 'tours' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}`}><Compass className="mr-2 inline" size={15} />Tours</button><button onClick={() => setPanel('users')} className={`rounded-full px-4 py-2 text-sm font-bold ${panel === 'users' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}`}><Users className="mr-2 inline" size={15} />Customers & access</button><button onClick={() => setPanel('contact')} className={`rounded-full px-4 py-2 text-sm font-bold ${panel === 'contact' ? 'bg-secondary text-secondary-foreground' : 'bg-muted'}`}><Phone className="mr-2 inline" size={15} />Contact details</button></div>
+    {panel === 'tours' && <div className="mt-8 grid gap-8 lg:grid-cols-[.9fr_1.1fr]"><form onSubmit={saveTour} className="rounded-2xl border border-border bg-card p-6"><div className="flex items-center justify-between"><h2 className="font-display text-3xl">{editingId ? 'Edit a journey' : 'Add a journey'}</h2>{editingId && <button type="button" onClick={() => { setEditingId(null); setDraft(emptyTour); }} className="text-sm font-bold text-primary">Cancel</button>}</div><div className="mt-6 grid gap-4 sm:grid-cols-2">{input('Title', 'title')} {input('Style', 'style')} {input('Price (₹)', 'price', 'number')} {input('Days', 'days', 'number')} {input('Nights', 'nights', 'number')} {input('Image URL', 'image')} {input('Destinations (comma separated)', 'destinations')} {input('Accommodation', 'accommodation')} {input('Transportation', 'transportation')}</div><label className="mt-4 block text-sm font-semibold">Description<textarea className="field mt-2 min-h-28" value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></label><div className="mt-4 grid gap-4 sm:grid-cols-2">{input('What is included (comma separated)', 'inclusions')} {input('Not included (comma separated)', 'exclusions')}</div><button className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"><Save size={16} />{editingId ? 'Save changes' : 'Publish tour'}</button></form><div className="space-y-3">{tours.map(tour => <div key={tour.id} className="flex gap-4 rounded-2xl border border-border bg-card p-4"><img src={tour.image} alt="" className="h-24 w-28 rounded-xl object-cover" /><div className="min-w-0 flex-1"><div className="flex justify-between gap-3"><div><h3 className="font-semibold">{tour.title}</h3><p className="text-sm text-muted-foreground">₹{tour.price.toLocaleString('en-IN')} · {tour.days} days · {tour.style}</p></div><div className="flex gap-1"><button onClick={() => { setEditingId(tour.id); setDraft(tour); }} className="rounded-full p-2 text-primary hover:bg-muted" aria-label="Edit tour"><Edit3 size={16} /></button><button onClick={() => removeTour(tour.id)} className="rounded-full p-2 text-destructive hover:bg-muted" aria-label="Remove tour"><Trash2 size={16} /></button></div></div><p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{tour.description}</p></div></div>)}</div></div>}
+    {panel === 'users' && <section className="mt-8 rounded-2xl border border-border bg-card p-6"><h2 className="font-display text-3xl">Customers & access</h2><p className="mt-2 text-sm text-muted-foreground">Review customer contact details and block accounts that should not place new bookings.</p><div className="mt-6 space-y-3">{users.map(user => <div key={user.id} className="flex flex-col justify-between gap-3 border-t border-border py-4 sm:flex-row sm:items-center"><div><p className="font-semibold">{user.name} {user.role === 'admin' && <span className="ml-2 rounded-full bg-accent/40 px-2 py-1 text-xs">Admin</span>}</p><p className="text-sm text-muted-foreground">{user.email} · {user.phone || 'No phone added'}</p></div>{user.role !== 'admin' && <button onClick={() => toggleBlacklist(user)} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${user.isBlacklisted ? 'bg-accent text-foreground' : 'bg-destructive/10 text-destructive'}`}><Ban size={15} />{user.isBlacklisted ? 'Restore access' : 'Blacklist'}</button>}</div>)}</div></section>}
+    {panel === 'contact' && <form onSubmit={saveSettings} className="mt-8 max-w-2xl rounded-2xl border border-border bg-card p-6"><h2 className="font-display text-3xl">Public contact details</h2><p className="mt-2 text-sm text-muted-foreground">These details are used by the travel team and shown to visitors.</p><div className="mt-6 space-y-4"><label className="block text-sm font-semibold">Support email<input className="field mt-2" type="email" value={settings.supportEmail} onChange={e => setSettings({ ...settings, supportEmail: e.target.value })} /></label><label className="block text-sm font-semibold">Support phone<input className="field mt-2" value={settings.supportPhone} onChange={e => setSettings({ ...settings, supportPhone: e.target.value })} /></label><label className="block text-sm font-semibold">WhatsApp<input className="field mt-2" value={settings.whatsapp} onChange={e => setSettings({ ...settings, whatsapp: e.target.value })} /></label></div><button className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground"><Save size={16} />Save contact details</button></form>}
+  </main></Shell>;
 }
 
 function Router() {

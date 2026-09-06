@@ -31,6 +31,7 @@ India With Us is a travel marketplace for discovering India, booking considered 
 
 - The visual language is editorial and warm: Playfair Display, DM Sans, saffron, clay, teal, and large India photography.
 - Public travel data uses a curated India-only seed set so the first preview is useful even before an admin adds content.
+- Customer accounts, bookings, saved plans, managed tours, blacklist status, and contact settings live in Replit PostgreSQL; GitHub should contain only code/schema, never customer records.
 - Checkout is intentionally demo/payment-ready: it creates an order record without ever accepting raw card details.
 - API contracts are OpenAPI-first; run codegen after changing `lib/api-spec/openapi.yaml`.
 
@@ -44,7 +45,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-- The current travel API keeps demo state in memory for the preview; restart the API to reset demo users, orders, and saved plans.
+- The original in-memory demo state has been moved to PostgreSQL; use the database pane to inspect development records and keep production data out of GitHub.
 - The generated Zod client uses Zod 4 APIs, so `@workspace/api-zod` intentionally pins its own Zod 4 dependency even though the broader workspace catalog remains on Zod 3.
 
 ## Pointers

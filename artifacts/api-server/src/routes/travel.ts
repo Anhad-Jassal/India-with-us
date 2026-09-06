@@ -41,7 +41,7 @@ type Tour = {
   accommodation: string;
   transportation: string;
 };
-type User = { id: number; name: string; email: string; phone?: string; role: "customer" | "admin" };
+type User = { id: number; name: string; email: string; phone?: string; role: "customer" | "admin"; isBlacklisted?: number };
 type Order = {
   id: number;
   orderNumber: string;
@@ -97,12 +97,28 @@ const tours: Tour[] = [
 ];
 
 const sessions = new Map<string, number>();
-const adminReady = pool.query(
-  `INSERT INTO users (name, email, role, password_hash)
-   VALUES ($1, $2, 'admin', $3)
-   ON CONFLICT (email) DO UPDATE SET role = 'admin'`,
-  ["Anhad Jassal", "anhadjassal2013@gmail.com", "d3afd5512a6adea84c1fdbac6c10cabf38afe9415e667f3d63eb763a95160d18"],
-);
+const tourSelect = `id, title, description, destinations, days, nights, price, style, image, rating, reviews, itinerary, inclusions, exclusions, accommodation, transportation`;
+const adminReady = (async () => {
+  await pool.query(
+    `INSERT INTO users (name, email, role, password_hash)
+     VALUES ($1, $2, 'admin', $3)
+     ON CONFLICT (email) DO UPDATE SET role = 'admin'`,
+    ["Anhad Jassal", "anhadjassal2013@gmail.com", "d3afd5512a6adea84c1fdbac6c10cabf38afe9415e667f3d63eb763a95160d18"],
+  );
+  for (const tour of tours) {
+    await pool.query(
+      `INSERT INTO tours (id, title, description, destinations, days, nights, price, style, image, rating, reviews, itinerary, inclusions, exclusions, accommodation, transportation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       ON CONFLICT (id) DO NOTHING`,
+      [tour.id, tour.title, tour.description, JSON.stringify(tour.destinations), tour.days, tour.nights, tour.price, tour.style, tour.image, Math.round(tour.rating), tour.reviews, JSON.stringify(tour.itinerary), JSON.stringify(tour.inclusions), JSON.stringify(tour.exclusions), tour.accommodation, tour.transportation],
+    );
+  }
+  await pool.query(
+    `INSERT INTO site_settings (id, support_email, support_phone, whatsapp)
+     VALUES (1, 'hello@indiawithus.travel', '+91 80 4123 8800', '+91 90000 12345')
+     ON CONFLICT (id) DO NOTHING`,
+  );
+})();
 
 const getUser = async (req: Request) => {
   const session = req.headers.cookie?.match(/iwu_session=([^;]+)/)?.[1];
@@ -147,18 +163,21 @@ router.get("/destinations/:id", (req, res) => {
   }
   res.json(destination);
 });
-router.get("/tours", (req, res) => {
+router.get("/tours", async (req, res) => {
+  await adminReady;
   const parsed = ListToursQueryParams.safeParse(req.query);
   const query = parsed.success ? parsed.data : {};
   const search = query.search?.toLowerCase();
-  const result = tours.filter((tour) => (!search || `${tour.title} ${tour.description} ${tour.destinations.join(" ")}`.toLowerCase().includes(search)) && (!query.style || tour.style === query.style) && (!query.maxPrice || tour.price <= query.maxPrice));
+  const catalog = (await pool.query<Tour>(`SELECT ${tourSelect} FROM tours ORDER BY id`)).rows;
+  const result = catalog.filter((tour) => (!search || `${tour.title} ${tour.description} ${(tour.destinations as string[]).join(" ")}`.toLowerCase().includes(search)) && (!query.style || tour.style === query.style) && (!query.maxPrice || tour.price <= query.maxPrice));
   if (query.sort === "price-low") result.sort((a, b) => a.price - b.price);
   if (query.sort === "price-high") result.sort((a, b) => b.price - a.price);
   if (query.sort === "popular") result.sort((a, b) => b.rating - a.rating);
   res.json(result);
 });
-router.get("/tours/:id", (req, res) => {
-  const tour = tours.find((item) => item.id === Number(req.params.id));
+router.get("/tours/:id", async (req, res) => {
+  await adminReady;
+  const tour = (await pool.query<Tour>(`SELECT ${tourSelect} FROM tours WHERE id = $1`, [Number(req.params.id)])).rows[0];
   if (!tour) {
     res.status(404).json({ error: "Tour not found" });
     return;
@@ -196,11 +215,11 @@ router.post("/auth/login", async (req, res) => {
   }
   await adminReady;
   const result = await pool.query<User & { passwordHash: string }>(
-    `SELECT id, name, email, phone, role, password_hash AS "passwordHash" FROM users WHERE email = $1`,
+    `SELECT id, name, email, phone, role, is_blacklisted AS "isBlacklisted", password_hash AS "passwordHash" FROM users WHERE email = $1`,
     [parsed.data.email],
   );
   const user = result.rows[0];
-  if (!user || user.passwordHash !== hashPassword(parsed.data.password)) {
+  if (!user || user.passwordHash !== hashPassword(parsed.data.password) || user.isBlacklisted) {
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
@@ -241,7 +260,8 @@ router.post("/orders", async (req, res) => {
     res.status(400).json({ error: "Please complete all checkout details." });
     return;
   }
-  const tour = tours.find((item) => item.id === parsed.data.tourId);
+  await adminReady;
+  const tour = (await pool.query<Tour>(`SELECT ${tourSelect} FROM tours WHERE id = $1`, [parsed.data.tourId])).rows[0];
   if (!tour) {
     res.status(404).json({ error: "Tour not found." });
     return;
@@ -311,14 +331,126 @@ router.post("/contact", (req, res) => {
 });
 router.get("/admin/summary", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
-  const [usersResult, ordersResult, plansResult, revenueResult, recentResult] = await Promise.all([
+  const [usersResult, ordersResult, plansResult, toursResult, revenueResult, recentResult] = await Promise.all([
     pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM users"),
     pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM orders"),
     pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM custom_plans"),
+    pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM tours"),
     pool.query<{ revenue: string }>("SELECT COALESCE(SUM(amount), 0)::text AS revenue FROM orders"),
     pool.query<Order>("SELECT id, order_number AS \"orderNumber\", tour_id AS \"tourId\", tour_title AS \"tourTitle\", travel_date AS \"travelDate\", travelers, amount, payment_status AS \"paymentStatus\", booking_status AS \"bookingStatus\", created_at AS \"createdAt\" FROM orders ORDER BY created_at DESC LIMIT 5"),
   ]);
-  res.json({ totalUsers: Number(usersResult.rows[0].count), totalTours: tours.length, totalOrders: Number(ordersResult.rows[0].count), totalPlans: Number(plansResult.rows[0].count), revenue: Number(revenueResult.rows[0].revenue), recentOrders: recentResult.rows });
+  res.json({ totalUsers: Number(usersResult.rows[0].count), totalTours: Number(toursResult.rows[0].count), totalOrders: Number(ordersResult.rows[0].count), totalPlans: Number(plansResult.rows[0].count), revenue: Number(revenueResult.rows[0].revenue), recentOrders: recentResult.rows });
+});
+
+const validateTourInput = (body: any) => {
+  const required = ["title", "description", "style", "image", "accommodation", "transportation"];
+  if (!required.every((key) => typeof body?.[key] === "string" && body[key].trim())) return false;
+  if (!Number.isFinite(Number(body.price)) || Number(body.price) < 0) return false;
+  if (!Number.isInteger(Number(body.days)) || Number(body.days) < 1) return false;
+  if (!Number.isInteger(Number(body.nights)) || Number(body.nights) < 0) return false;
+  return Array.isArray(body.destinations) && body.destinations.length > 0;
+};
+
+router.get("/admin/tours", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  await adminReady;
+  res.json((await pool.query<Tour>(`SELECT ${tourSelect} FROM tours ORDER BY id`)).rows);
+});
+
+router.post("/admin/tours", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!validateTourInput(req.body)) {
+    res.status(400).json({ error: "Please provide a title, description, image, price, destinations, and trip details." });
+    return;
+  }
+  const body = req.body;
+  const nextId = await pool.query<{ id: number }>("SELECT COALESCE(MAX(id), 0) + 1 AS id FROM tours");
+  const result = await pool.query<Tour>(
+    `INSERT INTO tours (id, title, description, destinations, days, nights, price, style, image, rating, reviews, itinerary, inclusions, exclusions, accommodation, transportation)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+     RETURNING ${tourSelect}`,
+    [nextId.rows[0].id, body.title.trim(), body.description.trim(), JSON.stringify(body.destinations), Number(body.days), Number(body.nights), Number(body.price), body.style.trim(), body.image.trim(), Number(body.rating || 5), Number(body.reviews || 0), JSON.stringify(body.itinerary || []), JSON.stringify(body.inclusions || []), JSON.stringify(body.exclusions || []), body.accommodation.trim(), body.transportation.trim()],
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+router.patch("/admin/tours/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  if (!validateTourInput(req.body)) {
+    res.status(400).json({ error: "Please provide complete tour details." });
+    return;
+  }
+  const body = req.body;
+  const result = await pool.query<Tour>(
+    `UPDATE tours SET title = $1, description = $2, destinations = $3, days = $4, nights = $5, price = $6, style = $7, image = $8, rating = $9, reviews = $10, itinerary = $11, inclusions = $12, exclusions = $13, accommodation = $14, transportation = $15
+     WHERE id = $16 RETURNING ${tourSelect}`,
+    [body.title.trim(), body.description.trim(), JSON.stringify(body.destinations), Number(body.days), Number(body.nights), Number(body.price), body.style.trim(), body.image.trim(), Number(body.rating || 5), Number(body.reviews || 0), JSON.stringify(body.itinerary || []), JSON.stringify(body.inclusions || []), JSON.stringify(body.exclusions || []), body.accommodation.trim(), body.transportation.trim(), Number(req.params.id)],
+  );
+  if (!result.rows[0]) {
+    res.status(404).json({ error: "Tour not found." });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
+router.delete("/admin/tours/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const result = await pool.query("DELETE FROM tours WHERE id = $1", [Number(req.params.id)]);
+  if (!result.rowCount) {
+    res.status(404).json({ error: "Tour not found." });
+    return;
+  }
+  res.status(204).send();
+});
+
+router.get("/admin/users", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const result = await pool.query("SELECT id, name, email, phone, role, is_blacklisted AS \"isBlacklisted\", created_at AS \"createdAt\" FROM users ORDER BY created_at DESC");
+  res.json(result.rows);
+});
+
+router.patch("/admin/users/:id/blacklist", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const admin = await getUser(req);
+  if (admin?.id === Number(req.params.id)) {
+    res.status(400).json({ error: "You cannot blacklist the active admin account." });
+    return;
+  }
+  const blacklisted = Boolean(req.body?.blacklisted);
+  const result = await pool.query("UPDATE users SET is_blacklisted = $1 WHERE id = $2 RETURNING id, name, email, phone, role, is_blacklisted AS \"isBlacklisted\"", [blacklisted ? 1 : 0, Number(req.params.id)]);
+  if (!result.rows[0]) {
+    res.status(404).json({ error: "User not found." });
+    return;
+  }
+  res.json(result.rows[0]);
+});
+
+router.get("/site-settings", async (_req, res) => {
+  await adminReady;
+  const result = await pool.query("SELECT support_email AS \"supportEmail\", support_phone AS \"supportPhone\", whatsapp FROM site_settings WHERE id = 1");
+  res.json(result.rows[0]);
+});
+
+router.get("/admin/settings", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  await adminReady;
+  const result = await pool.query("SELECT support_email AS \"supportEmail\", support_phone AS \"supportPhone\", whatsapp FROM site_settings WHERE id = 1");
+  res.json(result.rows[0]);
+});
+
+router.patch("/admin/settings", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const { supportEmail, supportPhone, whatsapp } = req.body || {};
+  if (![supportEmail, supportPhone, whatsapp].every((value) => typeof value === "string" && value.trim())) {
+    res.status(400).json({ error: "Please provide all contact details." });
+    return;
+  }
+  const result = await pool.query(
+    `UPDATE site_settings SET support_email = $1, support_phone = $2, whatsapp = $3, updated_at = NOW() WHERE id = 1
+     RETURNING support_email AS "supportEmail", support_phone AS "supportPhone", whatsapp`,
+    [supportEmail.trim(), supportPhone.trim(), whatsapp.trim()],
+  );
+  res.json(result.rows[0]);
 });
 
 export default router;
