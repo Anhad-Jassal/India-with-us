@@ -30,18 +30,6 @@ const photos = {
   goa: 'https://images.pexels.com/photos/1005417/pexels-photo-1005417.jpeg?auto=compress&cs=tinysrgb&w=900',
 };
 
-function IndiaMark({ className = 'h-10 w-10' }: { className?: string }) {
-  return <svg viewBox="0 0 48 48" className={className} role="img" aria-label="India with us logo">
-    <rect width="48" height="48" rx="16" fill="#234b4a" />
-    <path d="M8 17.5h32" stroke="#ff9933" strokeWidth="4" strokeLinecap="round" />
-    <path d="M8 30.5h32" stroke="#138808" strokeWidth="4" strokeLinecap="round" />
-    <circle cx="24" cy="24" r="7.5" fill="#f8f1e6" />
-    <circle cx="24" cy="24" r="5.5" fill="none" stroke="#174b8f" strokeWidth="1.4" />
-    <circle cx="24" cy="24" r="1.5" fill="#174b8f" />
-    <path d="M24 18.5v11M18.5 24h11M20.1 20.1l7.8 7.8M27.9 20.1l-7.8 7.8" stroke="#174b8f" strokeWidth="1" strokeLinecap="round" />
-  </svg>;
-}
-
 const fallbackDestinations = [
   { id: 1, name: 'Jaipur', state: 'Rajasthan', region: 'North', description: 'Rose-pink walls, royal courtyards and stories in every bazaar lane.', image: photos.jaipur, attractions: ['Amber Fort', 'Hawa Mahal', 'City Palace'], startingPrice: 18500 },
   { id: 2, name: 'Alappuzha', state: 'Kerala', region: 'South', description: 'Slow afternoons on backwaters, coconut groves and the spice coast.', image: photos.kerala, attractions: ['Backwaters', 'Kuttanad', 'Marari Beach'], startingPrice: 24000 },
@@ -68,10 +56,10 @@ function Button({ children, className = '', variant = 'primary', ...props }: But
 function Header() {
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useLocation();
-  const links = [['Tours', '/tours'], ['Destinations', '/destinations'], ['Plan your trip', '/plan'], ['Help', '/help']];
+  const links = [['Home', '/'], ['Tours', '/tours'], ['Destinations', '/destinations'], ['Plan your trip', '/plan'], ['Help', '/help']];
   return <header className="sticky top-0 z-20 border-b border-border/70 bg-background/90 backdrop-blur-md">
     <div className="container-page flex h-[4.5rem] items-center justify-between">
-      <Link href="/" className="flex items-center gap-3" data-testid="link-logo"><IndiaMark /><span className="font-display text-xl font-semibold tracking-tight">India <i className="not-italic text-primary">with</i> us</span></Link>
+      <Link href="/" className="flex items-center gap-3" data-testid="link-logo"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-secondary text-accent"><Compass size={21} /></span><span className="font-display text-xl font-semibold tracking-tight">India <i className="not-italic text-primary">with</i> us</span></Link>
       <nav className={`${open ? 'absolute left-5 right-5 top-20 flex' : 'hidden'} flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-lg md:static md:flex md:flex-row md:items-center md:gap-7 md:border-0 md:bg-transparent md:p-0 md:shadow-none`}>
         {links.map(([label, href]) => <Link key={href} href={href} onClick={() => setOpen(false)} className={`rounded-lg px-2 py-2 text-sm font-medium ${location === href ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>{label}</Link>)}
         <Link href="/account" onClick={() => setOpen(false)} className="flex items-center gap-2 px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground" data-testid="link-account"><UserRound size={16} /> Account</Link>
@@ -86,7 +74,7 @@ function Footer() {
   const [settings, setSettings] = useState({ supportEmail: 'hello@indiawithus.travel', supportPhone: '+91 80 4123 8800', whatsapp: '+91 90000 12345' });
   useEffect(() => { fetch('/api/site-settings').then(response => response.ok ? response.json() : null).then(data => data && setSettings(data)).catch(() => undefined); }, []);
   return <footer className="mt-24 bg-secondary text-secondary-foreground"><div className="container-page grid gap-12 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-    <div><div className="flex items-center gap-3"><IndiaMark /><span className="font-display text-2xl">India with us</span></div><p className="mt-5 max-w-xs text-sm leading-6 text-secondary-foreground/70">Thoughtful journeys across a country too rich for a checklist.</p></div>
+    <div><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent text-foreground"><Compass size={20} /></span><span className="font-display text-2xl">India with us</span></div><p className="mt-5 max-w-xs text-sm leading-6 text-secondary-foreground/70">Thoughtful journeys across a country too rich for a checklist.</p></div>
     <div><h3 className="mb-4 text-sm font-semibold text-accent">Explore</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><Link href="/tours" className="block hover:text-accent" data-testid="link-footer-tours">Ready-made tours</Link><Link href="/destinations" className="block hover:text-accent" data-testid="link-footer-destinations">Destinations</Link><Link href="/plan" className="block hover:text-accent" data-testid="link-footer-plan">Build your trip</Link></div></div>
     <div><h3 className="mb-4 text-sm font-semibold text-accent">For your peace of mind</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><p>Local support, 7 days</p><p>Clear pricing, always</p><p>Small, trusted partners</p></div></div>
     <div><h3 className="mb-4 text-sm font-semibold text-accent">Say hello</h3><div className="space-y-3 text-sm text-secondary-foreground/70"><a href={`mailto:${settings.supportEmail}`} className="flex items-center gap-2 hover:text-accent" data-testid="link-footer-email"><Mail size={15} /> {settings.supportEmail}</a><p className="flex items-center gap-2"><Phone size={15} /> {settings.supportPhone}</p><p className="text-xs">WhatsApp {settings.whatsapp}</p></div></div>
